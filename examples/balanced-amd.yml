@@ -1,0 +1,124 @@
+name: 平衡型-AMD
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 系统初始状态
+        run: |
+          echo "============================================="
+          echo "初始系统状态"
+          echo "============================================="
+          echo "内存和交换空间："
+          sudo free -h
+          echo ""
+          echo "可用存储："
+          sudo df -h
+          echo ""
+          
+      - name: 删除不需要的软件
+        run: |
+          set -euo pipefail
+          
+          echo "============================================="
+          echo "删除不需要的软件"
+          echo "============================================="
+          echo ""
+          
+          SPACE_BEFORE=$(df --output=avail -B 1 / | tail -1)
+          
+          remove_dir() {
+            local dir="$1"
+            local name="$2"
+            if [[ -d "$dir" ]] || [[ -f "$dir" ]]; then
+              echo -n "删除 $name... "
+              local size_mb=$(sudo du -sm "$dir" 2>/dev/null | cut -f1 || echo "0")
+              sudo rm -rf "$dir"
+              echo "释放 ${size_mb} MB"
+            else
+              echo "跳过 $name (未找到)"
+            fi
+          }
+          
+          # 平衡型 - 删除常见的大型软件包
+          
+          # 第一步：卸载APT软件包
+          echo ""
+          echo "正在卸载APT软件包..."
+          sudo apt-get remove -y --purge \
+            microsoft-edge-stable \
+            google-chrome-stable \
+            'temurin-*-jdk' \
+            'llvm-*-dev' \
+            2>/dev/null || true
+          
+          sudo apt-get autoremove -y 2>/dev/null || true
+          echo "APT软件包卸载完成"
+          echo ""
+          
+          # 第二步：删除目录（包括APT残留和非APT软件）
+          remove_dir "/usr/share/dotnet" ".NET SDK"
+          remove_dir "/usr/local/lib/android" "Android SDK"
+          remove_dir "/usr/local/.ghcup" "GHCup (Haskell)"
+          remove_dir "/usr/local/julia1.11.7" "Julia"
+          remove_dir "/usr/share/miniconda" "Miniconda"
+          remove_dir "/opt/microsoft/msedge" "Microsoft Edge"
+          remove_dir "/opt/google/chrome" "Google Chrome"
+          remove_dir "/usr/lib/firefox" "Firefox"
+          remove_dir "/usr/local/share/chromium" "Chromium"
+          remove_dir "/usr/lib/llvm-16" "LLVM 16"
+          remove_dir "/usr/lib/llvm-17" "LLVM 17"
+          remove_dir "/usr/lib/llvm-18" "LLVM 18"
+          remove_dir "/opt/pipx" "Pipx"
+          remove_dir "/usr/share/man" "手册页"
+          remove_dir "/usr/share/doc" "文档"
+          
+          echo -n "删除 Docker 镜像... "
+          sudo docker image prune --all --force > /dev/null 2>&1
+          echo "完成"
+          
+          echo -n "最终清理... "
+          sudo apt-get clean > /dev/null 2>&1 || true
+          echo "完成"
+          
+          SPACE_AFTER=$(df --output=avail -B 1 / | tail -1)
+          SPACE_FREED=$((SPACE_AFTER - SPACE_BEFORE))
+          SPACE_FREED_MB=$((SPACE_FREED / 1024 / 1024))
+          
+          echo ""
+          echo "总共释放空间: ${SPACE_FREED_MB} MB"
+          echo ""
+          
+      - name: 检出代码仓库
+        uses: actions/checkout@v4
+        
+      - name: 显示优化结果
+        run: |
+          echo "============================================="
+          echo "✅ 平衡型优化完成"
+          echo "============================================="
+          echo ""
+          echo "📊 存储状态："
+          df -h | grep -E '(Filesystem|/$)'
+          echo ""
+          echo "🧠 内存状态："
+          free -h
+          echo ""
+          ROOT_AVAIL=$(df -BG --output=avail / | tail -1 | tr -d 'G ')
+          echo "🎉 根目录可用空间: ${ROOT_AVAIL} GB"
+          echo "============================================="
+          echo ""
+          
+      - name: 安装并启动应用
+        run: |
+          if [ -f "start.sh" ]; then
+            echo "正在启动应用..."
+            bash start.sh
+          else
+            echo "警告：未找到 start.sh 文件，跳过应用启动"
+          fi
+

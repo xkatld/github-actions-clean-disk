@@ -1,0 +1,51 @@
+name: 标准型-ARM
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04-arm
+    
+    steps:
+      - name: 系统初始状态
+        run: |
+          echo "============================================="
+          echo "系统状态"
+          echo "============================================="
+          echo "内存和交换空间："
+          sudo free -h
+          echo ""
+          echo "可用存储："
+          sudo df -h
+          echo ""
+          
+      - name: 检出代码仓库
+        uses: actions/checkout@v4
+        
+      - name: 系统信息
+        run: |
+          echo "============================================="
+          echo "✅ 标准型（未优化）"
+          echo "============================================="
+          echo ""
+          echo "📊 存储状态："
+          df -h | grep -E '(Filesystem|/$)'
+          echo ""
+          echo "🧠 内存状态："
+          free -h
+          echo ""
+          ROOT_AVAIL=$(df -BG --output=avail / | tail -1 | tr -d 'G ')
+          echo "💾 根目录可用空间: ${ROOT_AVAIL} GB"
+          echo "============================================="
+          echo ""
+          
+      - name: 安装并启动应用
+        run: |
+          if [ -f "start.sh" ]; then
+            echo "正在启动应用..."
+            bash start.sh
+          else
+            echo "警告：未找到 start.sh 文件，跳过应用启动"
+          fi
+
