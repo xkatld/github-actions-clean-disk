@@ -48,44 +48,4 @@ jobs:
           else
             echo "警告：未找到 start.sh 文件，跳过应用启动"
           fi
-          
-      - name: 保持工作流运行
-        run: |
-          echo "============================================="
-          echo "🚀 启动保活进程"
-          echo "============================================="
-          echo ""
-          
-          START_TIME=$(date +%s)
-          ITERATION=0
-          
-          while true; do
-            ITERATION=$((ITERATION + 1))
-            CURRENT_TIME=$(date +%s)
-            ELAPSED=$((CURRENT_TIME - START_TIME))
-            ELAPSED_HOURS=$((ELAPSED / 3600))
-            ELAPSED_MINS=$(((ELAPSED % 3600) / 60))
-            ELAPSED_SECS=$((ELAPSED % 60))
-            
-            DISK_USED=$(df -h / | tail -1 | awk '{print $3}')
-            DISK_AVAIL=$(df -h / | tail -1 | awk '{print $4}')
-            DISK_PERCENT=$(df -h / | tail -1 | awk '{print $5}')
-            MEM_USED=$(free -h | grep Mem | awk '{print $3}')
-            MEM_AVAIL=$(free -h | grep Mem | awk '{print $7}')
-            
-            echo "============================================="
-            echo "📊 状态报告 #${ITERATION}"
-            echo "============================================="
-            echo "⏰ 运行时长: ${ELAPSED_HOURS}小时 ${ELAPSED_MINS}分 ${ELAPSED_SECS}秒"
-            echo "📅 当前时间: $(date '+%Y-%m-%d %H:%M:%S')"
-            echo ""
-            echo "💾 磁盘使用: 已用 ${DISK_USED} | 可用 ${DISK_AVAIL} | 使用率 ${DISK_PERCENT}"
-            echo "🧠 内存使用: 已用 ${MEM_USED} | 可用 ${MEM_AVAIL}"
-            echo ""
-            echo "🔄 下次更新将在 5 分钟后..."
-            echo "============================================="
-            echo ""
-            
-            sleep 300
-          done
 
